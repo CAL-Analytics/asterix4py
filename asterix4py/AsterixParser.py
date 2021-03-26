@@ -8,6 +8,10 @@ except ImportError:  # try backwards compatibility python < 3.7
 from . import config
 from . import icao6bitchars
 
+import logging
+import traceback
+import warnings
+
 dataItemsCache = {}
 uapItemsCache = {}
 
@@ -23,6 +27,7 @@ astXmlFiles = {
     30: 'asterix_cat030_6_2.xml',
     31: 'asterix_cat031_6_2.xml',
     32: 'asterix_cat032_7_0.xml',
+    34: 'asterix_cat034_1_26.xml',
     48: 'asterix_cat048_1_14.xml',
     62: 'asterix_cat062_1_18.xml',
     63: 'asterix_cat063_1_3.xml',
@@ -30,6 +35,11 @@ astXmlFiles = {
     242: 'asterix_cat242_1_0.xml',
     252: 'asterix_cat252_7_0.xml'
 }
+LOG_NAME = 'asterix_parser'
+logging.basicConfig(filename='{}.log'.format(LOG_NAME), level=logging.INFO)
+logger = logging.getLogger('asterix_parser')
+logging.captureWarnings(True)
+TRACEBACK_LIMIT = None
 
 
 class AsterixParser:
@@ -45,29 +55,26 @@ class AsterixParser:
 
         while self.p < self.datasize:
             startbyte = self.p
-            cat = int.from_bytes(self.bytes[0:1], byteorder='big', signed=False)
+            cat = int.from_bytes(self.bytes[self.p:self.p + 1], byteorder='big', signed=False)
             length = int.from_bytes(self.bytes[self.p + 1:self.p + 3], byteorder='big', signed=False)
             self.p += 3
-
-            if cat not in astXmlFiles:
-                # ignore unknown categories
-                self.p += length
-                continue
 
             self.loadAsterixDefinition(cat)
 
             while self.p < startbyte + length:
                 self.recordnr += 1
                 self.decoded = {'cat': cat}
-                if cat in dataItemsCache and cat in uapItemsCache:
-                    self.decode(dataItemsCache.get(cat), uapItemsCache.get(cat))
-                else:
-                    print(f"Error: unable to find asterix cat{cat:03d} in data items cache")
-                    self.p = startbyte + length
+                try:
+                    if cat in dataItemsCache and cat in uapItemsCache:
+                        self.decode(dataItemsCache.get(cat), uapItemsCache.get(cat))
+                    else:
+                        self.p = startbyte + length
+                        raise RuntimeError(f"Error: unable to find asterix cat{cat:03d} in data items cache")
+                except RuntimeError as err:
+                    logger.error('{}\n{}'.format(err, traceback.format_exc(limit=TRACEBACK_LIMIT)))
                 self.decoded_result[self.recordnr] = self.decoded
 
     """get decoded results in JSON format"""
-
     def get_result(self):
         return self.decoded_result
 
@@ -82,8 +89,8 @@ class AsterixParser:
                     dataItemsCache[cat] = category.getElementsByTagName('DataItem')
                     uap = category.getElementsByTagName('UAP')[0]
                     uapItemsCache[cat] = uap.getElementsByTagName('UAPItem')
-        except:
-            print('cat %d not supported' % cat)
+        except KeyError as err:
+            logger.error('cat {} not supported\n{}\n{}'.format(cat, err, traceback.format_exc(limit=TRACEBACK_LIMIT)))
             return
 
     def decode(self, dataitems, uapitems):
@@ -104,10 +111,12 @@ class AsterixParser:
 
         for i in range(0, 8 * fspec_octets_len):
             if fspec_octets & mask > 0:
-                itemid = uapitems[i].firstChild.nodeValue
-                if itemid != '-':
-                    itemids.append(itemid)
-
+                try:
+                    itemid = uapitems[i].firstChild.nodeValue
+                    if itemid != '-':
+                        itemids.append(itemid)
+                except IndexError as err:
+                    logger.error('Index Error:\n{}\n{}'.format(err, traceback.format_exc(limit=TRACEBACK_LIMIT)))
             mask >>= 1
 
         # ------------------ decode each dataitem --------------------------
@@ -178,17 +187,19 @@ class AsterixParser:
                         results[bit_name] = fieldBits
                     else:
                         # unknown encoder
-                        print(f"Warning: unknown encoding: {encode}")
+                        warnings.warn('Unknown encoding: {}'.format(encode), RuntimeWarning)
                         results[bit_name] = fieldBits
                 else:
                     results[bit_name] = fieldBits
 
                 # lets pretend this is only used for numeric values
                 BitsUnit = bits.getElementsByTagName("BitsUnit")
-                if BitsUnit:
-                    scale = BitsUnit[0].getAttribute('scale')
-                    results[bit_name] = results[bit_name] * float(scale)
-
+                try:
+                    if BitsUnit:
+                        scale = BitsUnit[0].getAttribute('scale')
+                        results[bit_name] = results[bit_name] * float(scale)
+                except ValueError as err:
+                    logger.error('ValueError:\n{}\n{}'.format(err, traceback.format_exc(limit=TRACEBACK_LIMIT)))
         return results
 
     def decode_variable(self, datafield):
