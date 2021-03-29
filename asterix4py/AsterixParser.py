@@ -35,10 +35,8 @@ astXmlFiles = {
     242: 'asterix_cat242_1_0.xml',
     252: 'asterix_cat252_7_0.xml'
 }
-LOG_NAME = 'asterix_parser'
-logging.basicConfig(filename='{}.log'.format(LOG_NAME), level=logging.INFO)
-logger = logging.getLogger('asterix_parser')
-logging.captureWarnings(True)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 TRACEBACK_LIMIT = None
 
 
