@@ -8,7 +8,6 @@ except ImportError:  # try backwards compatibility python < 3.7
 from . import config
 from . import icao6bitchars
 
-import logging
 import traceback
 import warnings
 
@@ -35,9 +34,6 @@ astXmlFiles = {
     242: 'asterix_cat242_1_0.xml',
     252: 'asterix_cat252_7_0.xml'
 }
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
-TRACEBACK_LIMIT = None
 
 
 class AsterixParser:
@@ -69,7 +65,7 @@ class AsterixParser:
                         self.p = startbyte + length
                         raise RuntimeError(f"Error: unable to find asterix cat{cat:03d} in data items cache")
                 except RuntimeError as err:
-                    logger.error('{}\n{}'.format(err, traceback.format_exc(limit=TRACEBACK_LIMIT)))
+                    raise RuntimeError(f"{err}\n{traceback.format_exc()}")
                 self.decoded_result[self.recordnr] = self.decoded
 
     """get decoded results in JSON format"""
@@ -88,7 +84,7 @@ class AsterixParser:
                     uap = category.getElementsByTagName('UAP')[0]
                     uapItemsCache[cat] = uap.getElementsByTagName('UAPItem')
         except KeyError as err:
-            logger.error('cat {} not supported\n{}\n{}'.format(cat, err, traceback.format_exc(limit=TRACEBACK_LIMIT)))
+            raise KeyError("cat {} not supported\n{}\n{}".format(cat, err, traceback.format_exc()))
             return
 
     def decode(self, dataitems, uapitems):
@@ -114,7 +110,7 @@ class AsterixParser:
                     if itemid != '-':
                         itemids.append(itemid)
                 except IndexError as err:
-                    logger.error('Index Error:\n{}\n{}'.format(err, traceback.format_exc(limit=TRACEBACK_LIMIT)))
+                    raise IndexError("Index Error:\n{}\n{}".format(err, traceback.format_exc()))
             mask >>= 1
 
         # ------------------ decode each dataitem --------------------------
@@ -197,7 +193,7 @@ class AsterixParser:
                         scale = BitsUnit[0].getAttribute('scale')
                         results[bit_name] = results[bit_name] * float(scale)
                 except ValueError as err:
-                    logger.error('ValueError:\n{}\n{}'.format(err, traceback.format_exc(limit=TRACEBACK_LIMIT)))
+                    raise ValueError("ValueError:\n{}\n{}".format(err, traceback.format_exc()))
         return results
 
     def decode_variable(self, datafield):
