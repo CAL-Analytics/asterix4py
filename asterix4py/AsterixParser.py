@@ -196,6 +196,8 @@ class AsterixParser:
                 try:
                     if BitsUnit:
                         scale = BitsUnit[0].getAttribute('scale')
+                        if not scale:
+                            scale = 1
                         results[bit_name] = results[bit_name] * float(scale)
                 except ValueError as err:
                     raise ValueError("ValueError:\n{}\n{}".format(err, traceback.format_exc()))
