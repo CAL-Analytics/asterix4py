@@ -31,7 +31,7 @@ astXmlFiles = {
     32: 'asterix_cat032_7_0.xml',
     34: 'asterix_cat034_1_27.xml',
     48: 'asterix_cat048_1_21.xml',
-    62: 'asterix_cat062_1_18.xml',
+    62: 'asterix_cat062_1_18_SkyVision.xml',
     63: 'asterix_cat063_1_3.xml',
     65: 'asterix_cat065_1_3.xml',
     205: 'asterix_cat205_1_0.xml',
@@ -66,18 +66,18 @@ class AsterixParser:
 
             self.loadAsterixDefinition(cat)
 
-            while self.p < startbyte + length:
-                self.recordnr += 1
-                self.decoded = {'cat': cat}
-                try:
-                    if cat in dataItemsCache and cat in uapItemsCache:
-                        self.decode(dataItemsCache.get(cat), uapItemsCache.get(cat))
-                    else:
-                        self.p = startbyte + length
-                        raise RuntimeError(f"Error: unable to find asterix cat{cat:03d} in data items cache")
-                except RuntimeError as err:
-                    raise RuntimeError(f"{err}\n{traceback.format_exc()}")
-                self.decoded_result[self.recordnr] = self.decoded
+            self.recordnr += 1
+            self.decoded = {'cat': cat}
+            try:
+                if cat in dataItemsCache and cat in uapItemsCache:
+                    self.decode(dataItemsCache.get(cat), uapItemsCache.get(cat))
+                else:
+                    self.p = startbyte + length
+                    raise RuntimeError(f"Error: unable to find asterix cat{cat:03d} in data items cache")
+            except RuntimeError as err:
+                raise RuntimeError(f"{err}\n{traceback.format_exc()}")
+            self.decoded_result[self.recordnr] = self.decoded
+            self.p = startbyte + length
 
     """get decoded results in JSON format"""
     def get_result(self):

@@ -7,7 +7,7 @@ HERE = pathlib.Path(__file__).parent
 
 VERSION = '1.0.6'
 PYTHON_REQUIRES = '>=3.7'
-PACKAGE_NAME = 'asterix4py'
+PACKAGE_NAME = 'asterix4py_skyvision'
 AUTHOR = 'Filip Jonckers'
 AUTHOR_EMAIL = ''
 URL = 'https://github.com/filipjonckers/asterix4py'
