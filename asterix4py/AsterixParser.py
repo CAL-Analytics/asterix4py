@@ -45,11 +45,12 @@ astXmlFiles = {
 class AsterixParser:
     """Decode bytearray of asterix data"""
 
-    def __init__(self, bytesdata):
+    def __init__(self, bytesdata, use_skyvision_hack=False):
         self.bytes = bytesdata
         self.datasize = len(bytesdata)
         self.p = 0
         self.recordnr = 0
+        self.use_skyvision_hack = use_skyvision_hack
 
         self.decoded_result = {}
 
@@ -78,6 +79,8 @@ class AsterixParser:
                 except RuntimeError as err:
                     raise RuntimeError(f"{err}\n{traceback.format_exc()}")
                 self.decoded_result[self.recordnr] = self.decoded
+                if self.use_skyvision_hack:
+                    self.p = startbyte + length
 
     """get decoded results in JSON format"""
     def get_result(self):
